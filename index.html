@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GOSI Account Statement — Interactive Analysis 2022–2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060a0f;
+    --bg2: #0c1018;
+    --bg3: #111820;
+    --surface: #141c26;
+    --surface2: #1a2433;
+    --gold: #c9a84c;
+    --gold2: #e8c96a;
+    --gold-dim: rgba(201,168,76,0.15);
+    --teal: #2dd4bf;
+    --teal-dim: rgba(45,212,191,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,0.12);
+    --blue: #60a5fa;
+    --purple: #a78bfa;
+    --text: #e8edf5;
+    --text2: #8a9ab0;
+    --text3: #4a5a6e;
+    --border: rgba(255,255,255,0.06);
+    --border2: rgba(201,168,76,0.2);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    background:var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Mono', monospace;
+    overflow-x:hidden;
+    min-height:100vh;
+  }
+
+  /* NOISE OVERLAY */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events:none; z-index:1000; opacity:.6;
+  }
+
+  /* GRID BG */
+  .grid-bg {
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:
+      linear-gradient(rgba(201,168,76,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201,168,76,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* HEADER */
+  header {
+    position:relative; z-index:10;
+    padding: 40px 60px 0;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .logo-block { display:flex; align-items:center; gap:14px; }
+  .logo-icon {
+    width:44px; height:44px;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Syne',sans-serif; font-weight:800; font-size:18px; color:#060a0f;
+  }
+  .logo-text { font-family:'Syne',sans-serif; font-size:13px; font-weight:600; color:var(--text2); letter-spacing:3px; text-transform:uppercase; }
+  .header-meta { font-size:11px; color:var(--text3); letter-spacing:1px; }
+  .live-dot { display:inline-block; width:6px; height:6px; background:var(--green); border-radius:50%; margin-right:6px; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.5)} }
+
+  /* HERO */
+  .hero {
+    position:relative; z-index:5;
+    padding: 50px 60px 40px;
+  }
+  .hero-eyebrow {
+    font-size:11px; color:var(--gold); letter-spacing:4px; text-transform:uppercase;
+    margin-bottom:16px; opacity:0;
+  }
+  .hero-title {
+    font-family:'Syne',sans-serif;
+    font-size:clamp(32px, 5vw, 58px);
+    font-weight:800; line-height:1.05;
+    color:var(--text);
+    margin-bottom:14px; opacity:0;
+  }
+  .hero-title span { color:var(--gold); }
+  .hero-sub { font-size:13px; color:var(--text2); line-height:1.7; max-width:540px; opacity:0; }
+
+  /* KPI GRID */
+  .kpi-grid {
+    display:grid; grid-template-columns:repeat(4, 1fr);
+    gap:16px; padding:0 60px;
+    position:relative; z-index:5;
+    margin-bottom:40px;
+  }
+  .kpi-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:22px 24px;
+    position:relative; overflow:hidden;
+    cursor:default;
+    opacity:0; transform:translateY(30px);
+    transition:border-color 0.3s, transform 0.3s;
+  }
+  .kpi-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    border-radius:16px 16px 0 0;
+  }
+  .kpi-card.gold::before { background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-card.teal::before { background:linear-gradient(90deg,var(--teal),transparent); }
+  .kpi-card.red::before { background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.green::before { background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card:hover { border-color:var(--border2); transform:translateY(-3px) !important; }
+  .kpi-label { font-size:10px; color:var(--text3); letter-spacing:2px; text-transform:uppercase; margin-bottom:10px; }
+  .kpi-val { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--text); }
+  .kpi-val.gold { color:var(--gold); }
+  .kpi-val.teal { color:var(--teal); }
+  .kpi-val.red { color:var(--red); }
+  .kpi-val.green { color:var(--green); }
+  .kpi-sub { font-size:11px; color:var(--text3); margin-top:6px; }
+  .kpi-badge {
+    position:absolute; top:16px; right:16px;
+    font-size:10px; padding:3px 8px; border-radius:20px;
+    font-weight:500;
+  }
+  .kpi-badge.up { background:var(--green-dim); color:var(--green); }
+  .kpi-badge.down { background:var(--red-dim); color:var(--red); }
+
+  /* MAIN LAYOUT */
+  .main { padding:0 60px 60px; position:relative; z-index:5; }
+
+  /* FILTERS */
+  .filters-bar {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:20px 24px;
+    margin-bottom:28px;
+    display:flex; flex-wrap:wrap; gap:16px; align-items:center;
+    opacity:0;
+  }
+  .filter-group { display:flex; flex-direction:column; gap:6px; }
+  .filter-label { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); }
+  .filter-btns { display:flex; gap:6px; flex-wrap:wrap; }
+  .fb {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px; padding:5px 12px;
+    border-radius:8px; border:1px solid var(--border);
+    background:transparent; color:var(--text2);
+    cursor:pointer; transition:all 0.2s;
+    letter-spacing:0.5px;
+  }
+  .fb:hover { border-color:var(--gold); color:var(--gold); }
+  .fb.active { background:var(--gold-dim); border-color:var(--gold); color:var(--gold); }
+  .filter-sep { width:1px; height:40px; background:var(--border); }
+  .search-input {
+    background:var(--bg3); border:1px solid var(--border);
+    color:var(--text); font-family:'IBM Plex Mono',monospace;
+    font-size:12px; padding:7px 14px; border-radius:8px;
+    outline:none; width:180px; transition:border-color 0.2s;
+  }
+  .search-input:focus { border-color:var(--gold); }
+  .search-input::placeholder { color:var(--text3); }
+  .reset-btn {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px; padding:6px 16px;
+    border-radius:8px; border:1px solid var(--border2);
+    background:var(--gold-dim); color:var(--gold);
+    cursor:pointer; transition:all 0.2s; letter-spacing:0.5px;
+    margin-left:auto;
+  }
+  .reset-btn:hover { background:var(--gold); color:#060a0f; }
+
+  /* CHARTS ROW */
+  .charts-row { display:grid; grid-template-columns:2fr 1fr; gap:20px; margin-bottom:20px; }
+  .chart-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:24px;
+    opacity:0; transform:translateY(20px);
+  }
+  .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+  .card-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:var(--text); }
+  .card-sub { font-size:10px; color:var(--text3); letter-spacing:1.5px; text-transform:uppercase; margin-top:3px; }
+  .chart-tabs { display:flex; gap:8px; }
+  .ct {
+    font-size:10px; padding:4px 10px; border-radius:6px;
+    border:1px solid var(--border); background:transparent;
+    color:var(--text3); cursor:pointer; transition:all 0.2s;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .ct.active { border-color:var(--gold); color:var(--gold); background:var(--gold-dim); }
+
+  /* SVG CHARTS */
+  .chart-area { position:relative; width:100%; }
+  svg.chart { width:100%; overflow:visible; }
+  .axis-line { stroke:var(--border); stroke-width:1; }
+  .grid-line { stroke:var(--border); stroke-width:1; stroke-dasharray:4,4; }
+  .axis-label { font-family:'IBM Plex Mono',monospace; font-size:10px; fill:var(--text3); }
+  .data-line { fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+  .line-gold { stroke:var(--gold); }
+  .line-teal { stroke:var(--teal); }
+  .area-fill { opacity:0.12; }
+  .data-dot { r:4; transition:r 0.2s; cursor:pointer; }
+  .data-dot:hover { r:7; }
+
+  /* BAR CHART */
+  .bar { transition:opacity 0.2s; cursor:pointer; }
+  .bar:hover { opacity:0.8; }
+
+  /* DONUT */
+  .donut-center { text-anchor:middle; dominant-baseline:middle; }
+  .legend { display:flex; flex-direction:column; gap:10px; margin-top:16px; }
+  .legend-item { display:flex; align-items:center; gap:10px; cursor:pointer; }
+  .legend-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+  .legend-label { font-size:11px; color:var(--text2); flex:1; }
+  .legend-val { font-size:11px; color:var(--text); font-weight:500; }
+
+  /* TOOLTIP */
+  .tooltip {
+    position:fixed; pointer-events:none;
+    background:var(--surface2); border:1px solid var(--border2);
+    border-radius:10px; padding:12px 16px;
+    font-size:12px; color:var(--text);
+    z-index:9999; opacity:0; transition:opacity 0.15s;
+    min-width:160px; box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  }
+  .tooltip-title { font-family:'Syne',sans-serif; font-weight:700; font-size:13px; margin-bottom:8px; color:var(--gold); }
+  .tooltip-row { display:flex; justify-content:space-between; gap:20px; margin-bottom:4px; }
+  .tooltip-key { color:var(--text3); font-size:11px; }
+  .tooltip-val { color:var(--text); font-weight:500; }
+
+  /* TABLE */
+  .table-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:24px;
+    opacity:0;
+  }
+  .table-controls { display:flex; gap:12px; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
+  .sort-btn {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; padding:5px 12px;
+    border-radius:7px; border:1px solid var(--border);
+    background:transparent; color:var(--text2);
+    cursor:pointer; transition:all 0.2s; letter-spacing:1px;
+  }
+  .sort-btn.active { border-color:var(--teal); color:var(--teal); background:var(--teal-dim); }
+  .entries-info { margin-left:auto; font-size:11px; color:var(--text3); }
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  thead th {
+    font-size:9px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--text3); padding:10px 14px; text-align:left;
+    border-bottom:1px solid var(--border);
+    cursor:pointer; user-select:none;
+    white-space:nowrap;
+  }
+  thead th:hover { color:var(--gold); }
+  thead th .sort-icon { margin-left:4px; opacity:0.4; }
+  thead th.sorted .sort-icon { opacity:1; color:var(--gold); }
+  tbody tr {
+    border-bottom:1px solid var(--border);
+    transition:background 0.15s;
+    opacity:0; transform:translateX(-10px);
+  }
+  tbody tr:hover { background:rgba(201,168,76,0.04); }
+  tbody td { padding:11px 14px; font-size:12px; color:var(--text2); white-space:nowrap; }
+  tbody td.highlight { color:var(--text); font-weight:500; }
+  .txn-badge {
+    display:inline-block; padding:3px 9px; border-radius:20px;
+    font-size:10px; font-weight:500;
+  }
+  .txn-Contributions { background:rgba(96,165,250,0.12); color:var(--blue); }
+  .txn-Late { background:var(--red-dim); color:var(--red); }
+  .txn-Receipts { background:var(--green-dim); color:var(--green); }
+  .txn-Violations { background:rgba(248,113,113,0.18); color:#fca5a5; }
+  .txn-Penalty { background:rgba(74,222,128,0.15); color:var(--green); }
+  .txn-GOSI { background:rgba(167,139,250,0.15); color:var(--purple); }
+  .txn-Backdated { background:rgba(201,168,76,0.12); color:var(--gold); }
+  .txn-Period { background:rgba(45,212,191,0.12); color:var(--teal); }
+  .debit-val { color:var(--red); }
+  .credit-val { color:var(--green); }
+  .balance-up { color:var(--teal); }
+
+  /* PAGINATION */
+  .pagination { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:20px; }
+  .pg-btn {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px; padding:5px 12px;
+    border-radius:7px; border:1px solid var(--border);
+    background:transparent; color:var(--text2);
+    cursor:pointer; transition:all 0.2s;
+  }
+  .pg-btn:hover, .pg-btn.active { border-color:var(--gold); color:var(--gold); background:var(--gold-dim); }
+  .pg-btn:disabled { opacity:0.3; cursor:default; }
+
+  /* SECONDARY CHARTS */
+  .charts-row2 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-bottom:20px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:var(--bg2); }
+  ::-webkit-scrollbar-thumb { background:var(--surface2); border-radius:3px; }
+  ::-webkit-scrollbar-thumb:hover { background:var(--gold-dim); }
+
+  /* SECTION DIVIDER */
+  .section-divider {
+    display:flex; align-items:center; gap:16px;
+    margin:0 60px 24px;
+    position:relative; z-index:5;
+  }
+  .divider-line { flex:1; height:1px; background:var(--border); }
+  .divider-label { font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--text3); }
+
+  /* ANIMATED LINE */
+  .path-anim { stroke-dasharray:2000; stroke-dashoffset:2000; }
+
+  /* SPARKLINE */
+  .sparkline { width:100%; height:50px; }
+
+  /* YEAR BADGE IN TABLE */
+  .year-tag {
+    display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; vertical-align:middle;
+  }
+
+  /* LOADING OVERLAY */
+  #loading {
+    position:fixed; inset:0; z-index:5000;
+    background:var(--bg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;
+  }
+  .load-logo { font-family:'Syne',sans-serif; font-size:48px; font-weight:800; color:var(--gold); }
+  .load-bar-wrap { width:200px; height:2px; background:var(--surface2); border-radius:2px; overflow:hidden; }
+  .load-bar { height:100%; background:linear-gradient(90deg,var(--gold),var(--gold2)); width:0; border-radius:2px; }
+  .load-text { font-size:11px; color:var(--text3); letter-spacing:3px; }
+
+  @media (max-width:1100px) {
+    .kpi-grid { grid-template-columns:repeat(2,1fr); padding:0 24px; }
+    header, .hero, .main, .section-divider { padding-left:24px; padding-right:24px; }
+    .charts-row { grid-template-columns:1fr; }
+    .charts-row2 { grid-template-columns:1fr 1fr; }
+  }
+  @media (max-width:640px) {
+    .kpi-grid { grid-template-columns:1fr 1fr; }
+    .charts-row2 { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="load-logo">GOSI</div>
+  <div class="load-bar-wrap"><div class="load-bar" id="loadBar"></div></div>
+  <div class="load-text">INITIALIZING ANALYSIS ENGINE</div>
+</div>
+
+<!-- TOOLTIP -->
+<div class="tooltip" id="tooltip"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-block">
+    <div class="logo-icon">G</div>
+    <div>
+      <div class="logo-text">GOSI Analytics</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px;">Account Statement Dashboard</div>
+    </div>
+  </div>
+  <div class="header-meta"><span class="live-dot"></span>Data Range: Feb 2022 – Feb 2026</div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">// GOSI ACCOUNT STATEMENT — INTERACTIVE ANALYSIS</div>
+  <h1 class="hero-title">Financial Intelligence<br><span>2022 – 2026</span></h1>
+  <p class="hero-sub">Comprehensive analysis of GOSI contributions, penalties, and settlements across 49 months with 134 individual transactions.</p>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid" id="kpiGrid">
+  <div class="kpi-card gold">
+    <div class="kpi-label">Current Balance</div>
+    <div class="kpi-val gold" id="kpi1">0</div>
+    <div class="kpi-sub">SAR — as of Feb 2026</div>
+    <span class="kpi-badge up">↑ DEBIT</span>
+  </div>
+  <div class="kpi-card teal">
+    <div class="kpi-label">Total Contributions</div>
+    <div class="kpi-val teal" id="kpi2">0</div>
+    <div class="kpi-sub">SAR — all periods</div>
+    <span class="kpi-badge down">DEBIT</span>
+  </div>
+  <div class="kpi-card red">
+    <div class="kpi-label">Total Late Fees</div>
+    <div class="kpi-val red" id="kpi3">0</div>
+    <div class="kpi-sub">SAR — penalties</div>
+    <span class="kpi-badge down">CHARGE</span>
+  </div>
+  <div class="kpi-card green">
+    <div class="kpi-label">Total Receipts</div>
+    <div class="kpi-val green" id="kpi4">0</div>
+    <div class="kpi-sub">SAR — payments made</div>
+    <span class="kpi-badge up">CREDIT</span>
+  </div>
+</div>
+
+<!-- SECTION LABEL -->
+<div class="section-divider">
+  <div class="divider-line"></div>
+  <div class="divider-label">// Balance Trend & Monthly Flow</div>
+  <div class="divider-line"></div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- FILTERS -->
+  <div class="filters-bar" id="filtersBar">
+    <div class="filter-group">
+      <div class="filter-label">Year</div>
+      <div class="filter-btns" id="yearFilters">
+        <button class="fb active" data-year="all">All</button>
+        <button class="fb" data-year="2022">2022</button>
+        <button class="fb" data-year="2023">2023</button>
+        <button class="fb" data-year="2024">2024</button>
+        <button class="fb" data-year="2025">2025</button>
+        <button class="fb" data-year="2026">2026</button>
+      </div>
+    </div>
+    <div class="filter-sep"></div>
+    <div class="filter-group">
+      <div class="filter-label">Transaction Type</div>
+      <div class="filter-btns" id="typeFilters">
+        <button class="fb active" data-type="all">All</button>
+        <button class="fb" data-type="Contributions">Contributions</button>
+        <button class="fb" data-type="Late Payment Fees">Late Fees</button>
+        <button class="fb" data-type="Receipts">Receipts</button>
+        <button class="fb" data-type="Violations">Violations</button>
+        <button class="fb" data-type="Penalty Waiver">Waiver</button>
+        <button class="fb" data-type="Backdated Joining">Backdated</button>
+        <button class="fb" data-type="Period Change">Period Chg</button>
+      </div>
+    </div>
+    <div class="filter-sep"></div>
+    <div class="filter-group">
+      <div class="filter-label">Search</div>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search transactions…">
+    </div>
+    <button class="reset-btn" id="resetBtn">↺ Reset</button>
+  </div>
+
+  <!-- MAIN CHARTS -->
+  <div class="charts-row">
+    <div class="chart-card" id="lineCard">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Balance Trajectory</div>
+          <div class="card-sub">Monthly closing balance — SAR</div>
+        </div>
+        <div class="chart-tabs">
+          <button class="ct active" data-mode="balance">Balance</button>
+          <button class="ct" data-mode="debit">Debits</button>
+          <button class="ct" data-mode="credit">Credits</button>
+        </div>
+      </div>
+      <div class="chart-area">
+        <svg class="chart" id="lineChart" height="220"></svg>
+      </div>
+    </div>
+
+    <div class="chart-card" id="donutCard">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Transaction Breakdown</div>
+          <div class="card-sub">By type — total debit SAR</div>
+        </div>
+      </div>
+      <div class="chart-area" style="display:flex;flex-direction:column;align-items:center;">
+        <svg id="donutChart" width="180" height="180" viewBox="0 0 180 180"></svg>
+        <div class="legend" id="donutLegend"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECONDARY CHARTS -->
+  <div class="charts-row2">
+    <div class="chart-card" id="barCard">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Monthly Debits</div>
+          <div class="card-sub">Total debit per month</div>
+        </div>
+      </div>
+      <div class="chart-area">
+        <svg class="chart" id="barChart" height="160"></svg>
+      </div>
+    </div>
+
+    <div class="chart-card" id="yearCard">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Annual Summary</div>
+          <div class="card-sub">Yearly totals</div>
+        </div>
+      </div>
+      <div class="chart-area">
+        <svg class="chart" id="yearChart" height="160"></svg>
+      </div>
+    </div>
+
+    <div class="chart-card" id="lateCard">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Late Fee Trend</div>
+          <div class="card-sub">Monthly penalty growth</div>
+        </div>
+      </div>
+      <div class="chart-area">
+        <svg class="chart" id="lateChart" height="160"></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRANSACTION TABLE -->
+  <div class="section-divider" style="margin:0 0 20px">
+    <div class="divider-line"></div>
+    <div class="divider-label">// Transaction Ledger</div>
+    <div class="divider-line"></div>
+  </div>
+
+  <div class="table-card" id="tableCard">
+    <div class="table-controls">
+      <div class="sort-btn active" data-sort="date">Date ↕</div>
+      <div class="sort-btn" data-sort="debit">Debit ↕</div>
+      <div class="sort-btn" data-sort="balance">Balance ↕</div>
+      <div class="entries-info" id="entriesInfo">Showing all entries</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-col="date">Date <span class="sort-icon">⇅</span></th>
+            <th data-col="year">Year <span class="sort-icon">⇅</span></th>
+            <th data-col="transaction">Type <span class="sort-icon">⇅</span></th>
+            <th data-col="debit">Debit (−) <span class="sort-icon">⇅</span></th>
+            <th data-col="credit">Credit (+) <span class="sort-icon">⇅</span></th>
+            <th data-col="balance">Balance <span class="sort-icon">⇅</span></th>
+          </tr>
+        </thead>
+        <tbody id="txnTableBody"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+gsap.registerPlugin(ScrollTrigger, TextPlugin);
+
+// ═══════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════
+const monthly = [{"year":"2022","month":"February 2022","opening":0,"debit":307.13,"credit":0,"closing":307.13,"type":"Debit"},{"year":"2022","month":"March 2022","opening":307.13,"debit":866.13,"credit":0,"closing":1173.26,"type":"Debit"},{"year":"2022","month":"April 2022","opening":1173.26,"debit":883.33,"credit":0,"closing":2056.59,"type":"Debit"},{"year":"2022","month":"May 2022","opening":2056.59,"debit":665.79,"credit":2056.59,"closing":665.79,"type":"Debit"},{"year":"2022","month":"June 2022","opening":665.79,"debit":1605.29,"credit":665.79,"closing":1605.29,"type":"Debit"},{"year":"2022","month":"July 2022","opening":1605.29,"debit":1946.29,"credit":0,"closing":3551.58,"type":"Debit"},{"year":"2022","month":"August 2022","opening":3551.58,"debit":2650.41,"credit":0,"closing":6201.99,"type":"Debit"},{"year":"2022","month":"September 2022","opening":6201.99,"debit":2235.43,"credit":0,"closing":8437.42,"type":"Debit"},{"year":"2022","month":"October 2022","opening":8437.42,"debit":2555.98,"credit":0,"closing":10993.4,"type":"Debit"},{"year":"2022","month":"November 2022","opening":10993.4,"debit":2992.23,"credit":0,"closing":13985.63,"type":"Debit"},{"year":"2022","month":"December 2022","opening":13985.63,"debit":3047.83,"credit":0,"closing":17033.46,"type":"Debit"},{"year":"2023","month":"January 2023","opening":17033.46,"debit":3324.18,"credit":0,"closing":20357.64,"type":"Debit"},{"year":"2023","month":"February 2023","opening":20357.64,"debit":3991.45,"credit":0,"closing":24349.09,"type":"Debit"},{"year":"2023","month":"March 2023","opening":24349.09,"debit":6614.54,"credit":0,"closing":30963.63,"type":"Debit"},{"year":"2023","month":"April 2023","opening":30963.63,"debit":6701.46,"credit":0,"closing":37665.09,"type":"Debit"},{"year":"2023","month":"May 2023","opening":37665.09,"debit":6633.36,"credit":0,"closing":44298.45,"type":"Debit"},{"year":"2023","month":"June 2023","opening":44298.45,"debit":7096.85,"credit":0,"closing":51395.3,"type":"Debit"},{"year":"2023","month":"July 2023","opening":51395.3,"debit":7716.77,"credit":0,"closing":59112.07,"type":"Debit"},{"year":"2023","month":"August 2023","opening":59112.07,"debit":6950.64,"credit":0,"closing":66062.71,"type":"Debit"},{"year":"2023","month":"September 2023","opening":66062.71,"debit":7181.29,"credit":0,"closing":73244,"type":"Debit"},{"year":"2023","month":"October 2023","opening":73244,"debit":8753.85,"credit":0,"closing":81997.85,"type":"Debit"},{"year":"2023","month":"November 2023","opening":81997.85,"debit":9653.75,"credit":0,"closing":91651.6,"type":"Debit"},{"year":"2023","month":"December 2023","opening":91651.6,"debit":9674.21,"credit":0,"closing":101325.81,"type":"Debit"},{"year":"2024","month":"January 2024","opening":101325.81,"debit":7241.42,"credit":101448.24,"closing":7118.99,"type":"Debit"},{"year":"2024","month":"February 2024","opening":7118.99,"debit":33485.4,"credit":28719.13,"closing":11885.26,"type":"Debit"},{"year":"2024","month":"March 2024","opening":11885.26,"debit":8976.89,"credit":11885.26,"closing":8976.89,"type":"Debit"},{"year":"2024","month":"April 2024","opening":8976.89,"debit":11231.32,"credit":0,"closing":20208.21,"type":"Debit"},{"year":"2024","month":"May 2024","opening":20208.21,"debit":21474.36,"credit":20208.21,"closing":21474.36,"type":"Debit"},{"year":"2024","month":"June 2024","opening":21474.36,"debit":12480.54,"credit":199.19,"closing":33755.71,"type":"Debit"},{"year":"2024","month":"July 2024","opening":33755.71,"debit":66734.27,"credit":2669.42,"closing":97820.56,"type":"Debit"},{"year":"2024","month":"August 2024","opening":97820.56,"debit":11015.01,"credit":0,"closing":108835.57,"type":"Debit"},{"year":"2024","month":"September 2024","opening":108835.57,"debit":11236.73,"credit":0,"closing":120072.3,"type":"Debit"},{"year":"2024","month":"October 2024","opening":120072.3,"debit":11530.23,"credit":461.63,"closing":131140.9,"type":"Debit"},{"year":"2024","month":"November 2024","opening":131140.9,"debit":10929.46,"credit":0,"closing":142070.36,"type":"Debit"},{"year":"2024","month":"December 2024","opening":142070.36,"debit":10994.5,"credit":0,"closing":153064.86,"type":"Debit"},{"year":"2025","month":"January 2025","opening":153064.86,"debit":11093.27,"credit":0,"closing":164158.13,"type":"Debit"},{"year":"2025","month":"February 2025","opening":164158.13,"debit":10758.3,"credit":0,"closing":174916.43,"type":"Debit"},{"year":"2025","month":"March 2025","opening":174916.43,"debit":18958.57,"credit":689.56,"closing":193185.44,"type":"Debit"},{"year":"2025","month":"April 2025","opening":193185.44,"debit":12542.09,"credit":0,"closing":205727.53,"type":"Debit"},{"year":"2025","month":"May 2025","opening":205727.53,"debit":12669.75,"credit":0,"closing":218397.28,"type":"Debit"},{"year":"2025","month":"June 2025","opening":218397.28,"debit":12150.7,"credit":0,"closing":230547.98,"type":"Debit"},{"year":"2025","month":"July 2025","opening":230547.98,"debit":24776.46,"credit":781.77,"closing":254542.67,"type":"Debit"},{"year":"2025","month":"August 2025","opening":254542.67,"debit":11730.52,"credit":0,"closing":266273.19,"type":"Debit"},{"year":"2025","month":"September 2025","opening":266273.19,"debit":10406.41,"credit":0,"closing":276679.6,"type":"Debit"},{"year":"2025","month":"October 2025","opening":276679.6,"debit":12989.57,"credit":0,"closing":289669.17,"type":"Debit"},{"year":"2025","month":"November 2025","opening":289669.17,"debit":13715.28,"credit":0,"closing":303384.45,"type":"Debit"},{"year":"2025","month":"December 2025","opening":303384.45,"debit":13278.12,"credit":0,"closing":316662.57,"type":"Debit"},{"year":"2026","month":"January 2026","opening":316662.57,"debit":12224.82,"credit":0,"closing":328887.39,"type":"Debit"},{"year":"2026","month":"February 2026","opening":328887.39,"debit":13658.59,"credit":0,"closing":342545.98,"type":"Debit"}];
+
+const txns = [{"year":"2022","date":"28-02-2022","transaction":"Contributions","debit":307.13,"credit":0,"balance":307.13},{"year":"2022","date":"17-03-2022","transaction":"Late Payment Fees","debit":6.13,"credit":0,"balance":313.26},{"year":"2022","date":"31-03-2022","transaction":"Contributions","debit":860,"credit":0,"balance":1173.26},{"year":"2022","date":"17-04-2022","transaction":"Late Payment Fees","debit":23.33,"credit":0,"balance":1196.59},{"year":"2022","date":"30-04-2022","transaction":"Contributions","debit":860,"credit":0,"balance":2056.59},{"year":"2022","date":"10-05-2022","transaction":"Receipts","debit":0,"credit":2056.59,"balance":0},{"year":"2022","date":"31-05-2022","transaction":"Contributions","debit":665.79,"credit":0,"balance":665.79},{"year":"2022","date":"08-06-2022","transaction":"Receipts","debit":0,"credit":665.79,"balance":0},{"year":"2022","date":"30-06-2022","transaction":"Contributions","debit":1605.29,"credit":0,"balance":1605.29},{"year":"2022","date":"20-07-2022","transaction":"Late Payment Fees","debit":32.11,"credit":0,"balance":1637.4},{"year":"2022","date":"31-07-2022","transaction":"Contributions","debit":1914.18,"credit":0,"balance":3551.58},{"year":"2022","date":"17-08-2022","transaction":"Late Payment Fees","debit":70.41,"credit":0,"balance":3621.99},{"year":"2022","date":"31-08-2022","transaction":"Contributions","debit":2580,"credit":0,"balance":6201.99},{"year":"2022","date":"17-09-2022","transaction":"Late Payment Fees","debit":122.01,"credit":0,"balance":6324},{"year":"2022","date":"30-09-2022","transaction":"Contributions","debit":2113.42,"credit":0,"balance":8437.42},{"year":"2022","date":"17-10-2022","transaction":"Late Payment Fees","debit":164.39,"credit":0,"balance":8601.81},{"year":"2022","date":"31-10-2022","transaction":"Contributions","debit":2391.59,"credit":0,"balance":10993.4},{"year":"2022","date":"17-11-2022","transaction":"Late Payment Fees","debit":212.23,"credit":0,"balance":11205.63},{"year":"2022","date":"30-11-2022","transaction":"Contributions","debit":2780,"credit":0,"balance":13985.63},{"year":"2022","date":"22-12-2022","transaction":"Late Payment Fees","debit":267.83,"credit":0,"balance":14253.46},{"year":"2022","date":"31-12-2022","transaction":"Contributions","debit":2780,"credit":0,"balance":17033.46},{"year":"2023","date":"17-01-2023","transaction":"Late Payment Fees","debit":323.43,"credit":0,"balance":17356.89},{"year":"2023","date":"31-01-2023","transaction":"Contributions","debit":3000.75,"credit":0,"balance":20357.64},{"year":"2023","date":"16-02-2023","transaction":"Late Payment Fees","debit":383.45,"credit":0,"balance":20741.09},{"year":"2023","date":"28-02-2023","transaction":"Contributions","debit":3608,"credit":0,"balance":24349.09},{"year":"2023","date":"16-03-2023","transaction":"Late Payment Fees","debit":455.61,"credit":0,"balance":24804.7},{"year":"2023","date":"31-03-2023","transaction":"Contributions","debit":6158.93,"credit":0,"balance":30963.63},{"year":"2023","date":"20-04-2023","transaction":"Late Payment Fees","debit":578.79,"credit":0,"balance":31542.42},{"year":"2023","date":"30-04-2023","transaction":"Contributions","debit":6122.67,"credit":0,"balance":37665.09},{"year":"2023","date":"17-05-2023","transaction":"Late Payment Fees","debit":701.24,"credit":0,"balance":38366.33},{"year":"2023","date":"31-05-2023","transaction":"Contributions","debit":5932.12,"credit":0,"balance":44298.45},{"year":"2023","date":"06-06-2023","transaction":"Backdated Joining","debit":119.56,"credit":0,"balance":44418.01},{"year":"2023","date":"15-06-2023","transaction":"Late Payment Fees","debit":819.9,"credit":0,"balance":45237.91},{"year":"2023","date":"30-06-2023","transaction":"Contributions","debit":6157.39,"credit":0,"balance":51395.3},{"year":"2023","date":"17-07-2023","transaction":"Late Payment Fees","debit":943.05,"credit":0,"balance":52338.35},{"year":"2023","date":"31-07-2023","transaction":"Contributions","debit":6773.72,"credit":0,"balance":59112.07},{"year":"2023","date":"17-08-2023","transaction":"Late Payment Fees","debit":1078.53,"credit":0,"balance":60190.6},{"year":"2023","date":"31-08-2023","transaction":"Contributions","debit":5872.11,"credit":0,"balance":66062.71},{"year":"2023","date":"17-09-2023","transaction":"Late Payment Fees","debit":1195.97,"credit":0,"balance":67258.68},{"year":"2023","date":"30-09-2023","transaction":"Contributions","debit":5985.32,"credit":0,"balance":73244},{"year":"2023","date":"17-10-2023","transaction":"Late Payment Fees","debit":1315.69,"credit":0,"balance":74559.69},{"year":"2023","date":"31-10-2023","transaction":"Contributions","debit":7438.16,"credit":0,"balance":81997.85},{"year":"2023","date":"16-11-2023","transaction":"Late Payment Fees","debit":1464.5,"credit":0,"balance":83462.35},{"year":"2023","date":"30-11-2023","transaction":"Contributions","debit":8189.25,"credit":0,"balance":91651.6},{"year":"2023","date":"17-12-2023","transaction":"Late Payment Fees","debit":1628.29,"credit":0,"balance":93279.89},{"year":"2023","date":"31-12-2023","transaction":"Contributions","debit":8045.92,"credit":0,"balance":101325.81},{"year":"2024","date":"03-01-2024","transaction":"Receipts","debit":0,"credit":73244,"balance":28081.81},{"year":"2024","date":"11-01-2024","transaction":"Receipts","debit":0,"credit":26000,"balance":-122.43},{"year":"2024","date":"11-01-2024","transaction":"Penalty Waiver","debit":0,"credit":2204.24,"balance":25877.57},{"year":"2024","date":"31-01-2024","transaction":"Contributions","debit":7241.42,"credit":0,"balance":7118.99},{"year":"2024","date":"12-02-2024","transaction":"Violations","debit":27141.88,"credit":0,"balance":34260.87},{"year":"2024","date":"15-02-2024","transaction":"Late Payment Fees","debit":110.42,"credit":0,"balance":34371.29},{"year":"2024","date":"20-02-2024","transaction":"Receipts","debit":0,"credit":7118.99,"balance":27252.3},{"year":"2024","date":"26-02-2024","transaction":"Period Change","debit":0,"credit":21600.14,"balance":5652.16},{"year":"2024","date":"29-02-2024","transaction":"Contributions","debit":6233.1,"credit":0,"balance":11885.26},{"year":"2024","date":"01-03-2024","transaction":"Backdated Joining","debit":8,"credit":0,"balance":11893.26},{"year":"2024","date":"04-03-2024","transaction":"GOSI Initiative to Waive Late Fees and Violations","debit":0,"credit":11885.26,"balance":8},{"year":"2024","date":"10-03-2024","transaction":"Backdated Joining","debit":51.02,"credit":0,"balance":59.02},{"year":"2024","date":"11-03-2024","transaction":"Backdated Joining","debit":51.02,"credit":0,"balance":110.04},{"year":"2024","date":"13-03-2024","transaction":"Backdated Joining","debit":51.02,"credit":0,"balance":161.06},{"year":"2024","date":"31-03-2024","transaction":"Contributions","debit":8815.83,"credit":0,"balance":8976.89},{"year":"2024","date":"04-04-2024","transaction":"Backdated Joining","debit":16,"credit":0,"balance":8992.89},{"year":"2024","date":"18-04-2024","transaction":"Late Payment Fees","debit":176.35,"credit":0,"balance":9169.24},{"year":"2024","date":"30-04-2024","transaction":"Contributions","debit":11038.97,"credit":0,"balance":20208.21},{"year":"2024","date":"08-05-2024","transaction":"Receipts","debit":0,"credit":20208.21,"balance":0},{"year":"2024","date":"31-05-2024","transaction":"Contributions","debit":21474.36,"credit":0,"balance":21474.36},{"year":"2024","date":"06-06-2024","transaction":"Backdated Joining","debit":153.06,"credit":0,"balance":21627.42},{"year":"2024","date":"09-06-2024","transaction":"Violations","debit":1196.96,"credit":0,"balance":22625.19},{"year":"2024","date":"09-06-2024","transaction":"Period Change","debit":0,"credit":199.19,"balance":21428.23},{"year":"2024","date":"20-06-2024","transaction":"Late Payment Fees","debit":425.67,"credit":0,"balance":23050.86},{"year":"2024","date":"30-06-2024","transaction":"Contributions","debit":10704.85,"credit":0,"balance":33755.71},{"year":"2024","date":"05-07-2024","transaction":"Violations","debit":6229.33,"credit":0,"balance":39755.71},{"year":"2024","date":"05-07-2024","transaction":"Period Change","debit":0,"credit":229.33,"balance":33526.38},{"year":"2024","date":"15-07-2024","transaction":"Violations","debit":12443.84,"credit":0,"balance":51746.85},{"year":"2024","date":"15-07-2024","transaction":"Period Change","debit":0,"credit":452.7,"balance":39303.01},{"year":"2024","date":"16-07-2024","transaction":"Violations","debit":18887.69,"credit":0,"balance":69729.1},{"year":"2024","date":"16-07-2024","transaction":"Period Change","debit":0,"credit":905.44,"balance":50841.41},{"year":"2024","date":"17-07-2024","transaction":"Violations","debit":6452.18,"credit":0,"balance":76778.63},{"year":"2024","date":"17-07-2024","transaction":"Late Payment Fees","debit":597.35,"credit":0,"balance":70326.45},{"year":"2024","date":"19-07-2024","transaction":"Period Change","debit":0,"credit":456.08,"balance":76322.55},{"year":"2024","date":"21-07-2024","transaction":"Violations","debit":6166.46,"credit":0,"balance":82489.01},{"year":"2024","date":"23-07-2024","transaction":"Violations","debit":6452.18,"credit":0,"balance":88941.19},{"year":"2024","date":"28-07-2024","transaction":"Period Change","debit":0,"credit":169.79,"balance":88771.4},{"year":"2024","date":"29-07-2024","transaction":"Period Change","debit":0,"credit":456.08,"balance":88315.32},{"year":"2024","date":"31-07-2024","transaction":"Contributions","debit":9505.24,"credit":0,"balance":97820.56},{"year":"2024","date":"03-08-2024","transaction":"Backdated Joining","debit":34,"credit":0,"balance":97854.56},{"year":"2024","date":"15-08-2024","transaction":"Late Payment Fees","debit":776.61,"credit":0,"balance":98631.17},{"year":"2024","date":"31-08-2024","transaction":"Contributions","debit":10204.4,"credit":0,"balance":108835.57},{"year":"2024","date":"17-09-2024","transaction":"Late Payment Fees","debit":980.71,"credit":0,"balance":109816.28},{"year":"2024","date":"30-09-2024","transaction":"Contributions","debit":10256.02,"credit":0,"balance":120072.3},{"year":"2024","date":"15-10-2024","transaction":"Violations","debit":1443.85,"credit":0,"balance":121054.52},{"year":"2024","date":"15-10-2024","transaction":"Period Change","debit":0,"credit":461.63,"balance":119610.67},{"year":"2024","date":"17-10-2024","transaction":"Late Payment Fees","debit":1176.59,"credit":0,"balance":122231.11},{"year":"2024","date":"31-10-2024","transaction":"Contributions","debit":8909.79,"credit":0,"balance":131140.9},{"year":"2024","date":"17-11-2024","transaction":"Late Payment Fees","debit":1354.77,"credit":0,"balance":132495.67},{"year":"2024","date":"30-11-2024","transaction":"Contributions","debit":9574.69,"credit":0,"balance":142070.36},{"year":"2024","date":"17-12-2024","transaction":"Late Payment Fees","debit":1546.26,"credit":0,"balance":143616.62},{"year":"2024","date":"31-12-2024","transaction":"Contributions","debit":9448.24,"credit":0,"balance":153064.86},{"year":"2025","date":"16-01-2025","transaction":"Late Payment Fees","debit":1735.23,"credit":0,"balance":154800.09},{"year":"2025","date":"31-01-2025","transaction":"Contributions","debit":9358.04,"credit":0,"balance":164158.13},{"year":"2025","date":"17-02-2025","transaction":"Late Payment Fees","debit":1922.39,"credit":0,"balance":166080.52},{"year":"2025","date":"28-02-2025","transaction":"Contributions","debit":8835.91,"credit":0,"balance":174916.43},{"year":"2025","date":"04-03-2025","transaction":"Backdated Joining","debit":36,"credit":0,"balance":174952.43},{"year":"2025","date":"09-03-2025","transaction":"Violations","debit":6586.28,"credit":0,"balance":180849.15},{"year":"2025","date":"09-03-2025","transaction":"Period Change","debit":0,"credit":689.56,"balance":174262.87},{"year":"2025","date":"17-03-2025","transaction":"Late Payment Fees","debit":2082.25,"credit":0,"balance":182931.4},{"year":"2025","date":"31-03-2025","transaction":"Contributions","debit":10254.04,"credit":0,"balance":193185.44},{"year":"2025","date":"17-04-2025","transaction":"Late Payment Fees","debit":2288.05,"credit":0,"balance":195473.49},{"year":"2025","date":"30-04-2025","transaction":"Contributions","debit":10254.04,"credit":0,"balance":205727.53},{"year":"2025","date":"15-05-2025","transaction":"Late Payment Fees","debit":2493.13,"credit":0,"balance":208220.66},{"year":"2025","date":"31-05-2025","transaction":"Contributions","debit":10176.62,"credit":0,"balance":218397.28},{"year":"2025","date":"17-06-2025","transaction":"Late Payment Fees","debit":2696.66,"credit":0,"balance":221093.94},{"year":"2025","date":"30-06-2025","transaction":"Contributions","debit":9454.04,"credit":0,"balance":230547.98},{"year":"2025","date":"11-03-2025","transaction":"Violations","debit":6249.67,"credit":0,"balance":236797.65},{"year":"2025","date":"14-03-2025","transaction":"Violations","debit":6452.18,"credit":0,"balance":243249.83},{"year":"2025","date":"17-07-2025","transaction":"Late Payment Fees","debit":2885.74,"credit":0,"balance":245841.08},{"year":"2025","date":"17-07-2025","transaction":"Period Change","debit":0,"credit":294.49,"balance":242955.34},{"year":"2025","date":"27-07-2025","transaction":"Period Change","debit":0,"credit":487.28,"balance":245353.8},{"year":"2025","date":"31-07-2025","transaction":"Contributions","debit":9188.87,"credit":0,"balance":254542.67},{"year":"2025","date":"06-08-2025","transaction":"Backdated Joining","debit":35.07,"credit":0,"balance":254577.74},{"year":"2025","date":"17-08-2025","transaction":"Late Payment Fees","debit":3064.37,"credit":0,"balance":257642.11},{"year":"2025","date":"31-08-2025","transaction":"Contributions","debit":8631.08,"credit":0,"balance":266273.19},{"year":"2025","date":"17-09-2025","transaction":"Late Payment Fees","debit":3237.7,"credit":0,"balance":269510.89},{"year":"2025","date":"30-09-2025","transaction":"Contributions","debit":7168.71,"credit":0,"balance":276679.6},{"year":"2025","date":"16-10-2025","transaction":"Late Payment Fees","debit":3381.07,"credit":0,"balance":280060.67},{"year":"2025","date":"31-10-2025","transaction":"Contributions","debit":9608.5,"credit":0,"balance":289669.17},{"year":"2025","date":"17-11-2025","transaction":"Late Payment Fees","debit":3573.24,"credit":0,"balance":293242.41},{"year":"2025","date":"30-11-2025","transaction":"Contributions","debit":10142.04,"credit":0,"balance":303384.45},{"year":"2025","date":"17-12-2025","transaction":"Late Payment Fees","debit":3776.08,"credit":0,"balance":307160.53},{"year":"2025","date":"31-12-2025","transaction":"Contributions","debit":9502.04,"credit":0,"balance":316662.57},{"year":"2026","date":"15-01-2026","transaction":"Late Payment Fees","debit":3966.12,"credit":0,"balance":320628.69},{"year":"2026","date":"31-01-2026","transaction":"Contributions","debit":8258.7,"credit":0,"balance":328887.39},{"year":"2026","date":"17-02-2026","transaction":"Late Payment Fees","debit":4131.3,"credit":0,"balance":333018.69},{"year":"2026","date":"28-02-2026","transaction":"Contributions","debit":9527.29,"credit":0,"balance":342545.98}];
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let state = {
+  yearFilter:'all',
+  typeFilter:'all',
+  search:'',
+  lineMode:'balance',
+  sortCol:'date',
+  sortDir:1,
+  page:1,
+  perPage:15
+};
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+const fmt = (n) => n === 0 ? '—' : n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtK = (n) => n >= 1000 ? (n/1000).toFixed(1)+'K' : n.toFixed(0);
+
+const yearColors = {'2022':'#60a5fa','2023':'#c9a84c','2024':'#f87171','2025':'#4ade80','2026':'#a78bfa'};
+
+function txnClass(t) {
+  if(t.startsWith('Contribution')) return 'txn-Contributions';
+  if(t.startsWith('Late')) return 'txn-Late';
+  if(t.startsWith('Receipt')) return 'txn-Receipts';
+  if(t.startsWith('Violation')) return 'txn-Violations';
+  if(t.startsWith('Penalty')) return 'txn-Penalty';
+  if(t.startsWith('GOSI')) return 'txn-GOSI';
+  if(t.startsWith('Backdated')) return 'txn-Backdated';
+  if(t.startsWith('Period')) return 'txn-Period';
+  return '';
+}
+
+function getFilteredTxns() {
+  return txns.filter(t => {
+    if(state.yearFilter !== 'all' && t.year !== state.yearFilter) return false;
+    if(state.typeFilter !== 'all' && t.transaction !== state.typeFilter) return false;
+    if(state.search) {
+      const s = state.search.toLowerCase();
+      if(!t.transaction.toLowerCase().includes(s) && !t.date.includes(s) && !t.year.includes(s)) return false;
+    }
+    return true;
+  });
+}
+
+function getFilteredMonthly() {
+  return monthly.filter(m => {
+    if(state.yearFilter !== 'all' && m.year !== state.yearFilter) return false;
+    return true;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SVG UTILITIES
+// ═══════════════════════════════════════════════════════════════
+function svgEl(tag, attrs={}) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k,v]) => el.setAttribute(k,v));
+  return el;
+}
+
+function showTooltip(e, html) {
+  const t = document.getElementById('tooltip');
+  t.innerHTML = html;
+  t.style.opacity = '1';
+  posTooltip(e);
+}
+function posTooltip(e) {
+  const t = document.getElementById('tooltip');
+  const tx = Math.min(e.clientX+14, window.innerWidth-180);
+  const ty = Math.max(e.clientY-60, 8);
+  t.style.left = tx+'px';
+  t.style.top = ty+'px';
+}
+function hideTooltip() { document.getElementById('tooltip').style.opacity='0'; }
+
+// ═══════════════════════════════════════════════════════════════
+// LINE CHART
+// ═══════════════════════════════════════════════════════════════
+function drawLineChart() {
+  const svg = document.getElementById('lineChart');
+  svg.innerHTML = '';
+  const data = getFilteredMonthly();
+  if(!data.length) return;
+
+  const W = svg.parentElement.clientWidth || 600;
+  const H = 220;
+  const pad = {l:60, r:20, t:20, b:36};
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const vals = data.map(d => state.lineMode === 'balance' ? d.closing : state.lineMode === 'debit' ? d.debit : d.credit);
+  const maxV = Math.max(...vals) * 1.1;
+  const minV = 0;
+
+  const x = (i) => pad.l + i * (W - pad.l - pad.r) / (data.length - 1);
+  const y = (v) => H - pad.b - (v - minV) / (maxV - minV) * (H - pad.t - pad.b);
+
+  // Grid
+  [0, .25, .5, .75, 1].forEach(t => {
+    const yv = H - pad.b - t*(H-pad.t-pad.b);
+    svg.appendChild(svgEl('line', {x1:pad.l, y1:yv, x2:W-pad.r, y2:yv, class:'grid-line'}));
+    svg.appendChild(svgEl('text', {x:pad.l-6, y:yv+4, class:'axis-label', 'text-anchor':'end',
+      'font-size':'9'})).textContent = fmtK(minV + t*(maxV-minV));
+  });
+
+  // X axis labels (every 6 months)
+  data.forEach((d, i) => {
+    if(i % 6 === 0 || i === data.length-1) {
+      const lbl = svg.appendChild(svgEl('text', {x:x(i), y:H-pad.b+16, class:'axis-label', 'text-anchor':'middle'}));
+      lbl.textContent = d.month.slice(0,3)+' '+d.year.slice(2);
+    }
+  });
+
+  // Area
+  const color = state.lineMode === 'balance' ? '#c9a84c' : state.lineMode === 'debit' ? '#f87171' : '#4ade80';
+  let areaPath = `M ${x(0)} ${H-pad.b} L ${x(0)} ${y(vals[0])}`;
+  vals.forEach((v,i) => { if(i>0) areaPath += ` L ${x(i)} ${y(v)}`; });
+  areaPath += ` L ${x(data.length-1)} ${H-pad.b} Z`;
+  const area = svg.appendChild(svgEl('path', {d:areaPath, fill:color, 'fill-opacity':'.08'}));
+
+  // Line
+  let linePath = vals.map((v,i) => `${i===0?'M':'L'} ${x(i)} ${y(v)}`).join(' ');
+  const line = svg.appendChild(svgEl('path', {d:linePath, fill:'none', stroke:color, 'stroke-width':'2.5',
+    'stroke-linecap':'round', 'stroke-linejoin':'round',
+    'stroke-dasharray':'2000', 'stroke-dashoffset':'2000'}));
+
+  gsap.to(line, {attr:{'stroke-dashoffset':0}, duration:1.8, ease:'power2.inOut'});
+
+  // Dots
+  vals.forEach((v,i) => {
+    const dot = svg.appendChild(svgEl('circle', {cx:x(i), cy:y(v), r:'4', fill:color, 'fill-opacity':'.8', style:'cursor:pointer'}));
+    dot.addEventListener('mouseenter', e => {
+      gsap.to(dot, {attr:{r:7}, duration:0.15});
+      showTooltip(e, `<div class="tooltip-title">${data[i].month}</div>
+        <div class="tooltip-row"><span class="tooltip-key">Closing</span><span class="tooltip-val">SAR ${fmt(data[i].closing)}</span></div>
+        <div class="tooltip-row"><span class="tooltip-key">Debit</span><span class="tooltip-val debit-val">SAR ${fmt(data[i].debit)}</span></div>
+        <div class="tooltip-row"><span class="tooltip-key">Credit</span><span class="tooltip-val credit-val">SAR ${fmt(data[i].credit)}</span></div>`);
+    });
+    dot.addEventListener('mousemove', posTooltip);
+    dot.addEventListener('mouseleave', () => { gsap.to(dot, {attr:{r:4}, duration:0.15}); hideTooltip(); });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BAR CHART
+// ═══════════════════════════════════════════════════════════════
+function drawBarChart() {
+  const svg = document.getElementById('barChart');
+  svg.innerHTML = '';
+  const data = getFilteredMonthly();
+  if(!data.length) return;
+
+  const W = svg.parentElement.clientWidth || 300;
+  const H = 160;
+  const pad = {l:40,r:8,t:10,b:24};
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const vals = data.map(d => d.debit);
+  const maxV = Math.max(...vals)*1.1 || 1;
+  const bW = (W-pad.l-pad.r)/data.length - 2;
+
+  vals.forEach((v,i) => {
+    const bH = (v/maxV)*(H-pad.t-pad.b);
+    const bX = pad.l + i*(W-pad.l-pad.r)/data.length + 1;
+    const bY = H-pad.b-bH;
+    const col = yearColors[data[i].year] || '#c9a84c';
+    const bar = svg.appendChild(svgEl('rect', {x:bX, y:H-pad.b, width:Math.max(bW,1), height:0, fill:col, 'fill-opacity':'.7', rx:'2', style:'cursor:pointer'}));
+    gsap.to(bar, {attr:{y:bY, height:bH}, duration:0.8, delay:i*0.015, ease:'power2.out'});
+    bar.addEventListener('mouseenter', e => {
+      gsap.to(bar, {'fill-opacity':1, duration:0.1});
+      showTooltip(e, `<div class="tooltip-title">${data[i].month}</div>
+        <div class="tooltip-row"><span class="tooltip-key">Debit</span><span class="tooltip-val">SAR ${fmt(v)}</span></div>`);
+    });
+    bar.addEventListener('mousemove', posTooltip);
+    bar.addEventListener('mouseleave', () => { gsap.to(bar, {'fill-opacity':0.7, duration:0.1}); hideTooltip(); });
+  });
+
+  // Y labels
+  [0,.5,1].forEach(t => {
+    const yv = H - pad.b - t*(H-pad.t-pad.b);
+    svg.appendChild(svgEl('text', {x:pad.l-4, y:yv+3, class:'axis-label', 'text-anchor':'end', 'font-size':'8'})).textContent = fmtK(t*maxV);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// YEAR BAR CHART
+// ═══════════════════════════════════════════════════════════════
+function drawYearChart() {
+  const svg = document.getElementById('yearChart');
+  svg.innerHTML = '';
+  const years = ['2022','2023','2024','2025','2026'];
+  const data = years.map(yr => ({
+    year:yr,
+    debit: txns.filter(t=>t.year===yr).reduce((s,t)=>s+t.debit,0),
+    credit: txns.filter(t=>t.year===yr).reduce((s,t)=>s+t.credit,0)
+  }));
+  const filtered = state.yearFilter === 'all' ? data : data.filter(d=>d.year===state.yearFilter);
+
+  const W = svg.parentElement.clientWidth || 300;
+  const H = 160;
+  const pad = {l:50,r:8,t:10,b:24};
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const maxV = Math.max(...filtered.map(d=>d.debit))*1.1 || 1;
+  const grpW = (W-pad.l-pad.r)/filtered.length;
+
+  filtered.forEach((d,i) => {
+    const bH = (d.debit/maxV)*(H-pad.t-pad.b);
+    const bX = pad.l + i*grpW + grpW*0.15;
+    const bW = grpW*0.7;
+    const bar = svg.appendChild(svgEl('rect', {x:bX, y:H-pad.b, width:bW, height:0, fill:yearColors[d.year], 'fill-opacity':'.8', rx:'3', style:'cursor:pointer'}));
+    gsap.to(bar, {attr:{y:H-pad.b-bH, height:bH}, duration:0.9, delay:i*0.1, ease:'power3.out'});
+
+    const lbl = svg.appendChild(svgEl('text', {x:bX+bW/2, y:H-pad.b+14, class:'axis-label', 'text-anchor':'middle', 'font-size':'9'}));
+    lbl.textContent = d.year;
+
+    bar.addEventListener('mouseenter', e => {
+      gsap.to(bar, {attr:{'fill-opacity':1}, duration:0.1});
+      showTooltip(e, `<div class="tooltip-title">${d.year}</div>
+        <div class="tooltip-row"><span class="tooltip-key">Total Debits</span><span class="tooltip-val debit-val">SAR ${fmt(d.debit)}</span></div>
+        <div class="tooltip-row"><span class="tooltip-key">Total Credits</span><span class="tooltip-val credit-val">SAR ${fmt(d.credit)}</span></div>`);
+    });
+    bar.addEventListener('mousemove', posTooltip);
+    bar.addEventListener('mouseleave', () => { gsap.to(bar, {attr:{'fill-opacity':0.8}, duration:0.1}); hideTooltip(); });
+  });
+
+  [0,.5,1].forEach(t => {
+    const yv = H - pad.b - t*(H-pad.t-pad.b);
+    svg.appendChild(svgEl('text', {x:pad.l-4, y:yv+3, class:'axis-label', 'text-anchor':'end', 'font-size':'8'})).textContent = fmtK(t*maxV);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LATE FEE TREND
+// ═══════════════════════════════════════════════════════════════
+function drawLateChart() {
+  const svg = document.getElementById('lateChart');
+  svg.innerHTML = '';
+  const lateData = txns.filter(t => t.transaction === 'Late Payment Fees');
+  const filtered = state.yearFilter === 'all' ? lateData : lateData.filter(t=>t.year===state.yearFilter);
+  if(!filtered.length) return;
+
+  const W = svg.parentElement.clientWidth || 300;
+  const H = 160;
+  const pad = {l:40,r:8,t:10,b:24};
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const vals = filtered.map(t=>t.debit);
+  const maxV = Math.max(...vals)*1.1 || 1;
+  const x = (i) => pad.l + i*(W-pad.l-pad.r)/(filtered.length-1||1);
+  const y = (v) => H - pad.b - (v/maxV)*(H-pad.t-pad.b);
+
+  // Area
+  let aPath = `M ${x(0)} ${H-pad.b} L ${x(0)} ${y(vals[0])}`;
+  vals.forEach((v,i) => { if(i>0) aPath += ` L ${x(i)} ${y(v)}`; });
+  aPath += ` L ${x(filtered.length-1)} ${H-pad.b} Z`;
+  svg.appendChild(svgEl('path', {d:aPath, fill:'#f87171', 'fill-opacity':'.1'}));
+
+  let linePath = vals.map((v,i)=>`${i===0?'M':'L'} ${x(i)} ${y(v)}`).join(' ');
+  const line = svg.appendChild(svgEl('path', {d:linePath, fill:'none', stroke:'#f87171', 'stroke-width':'2',
+    'stroke-dasharray':'1000','stroke-dashoffset':'1000'}));
+  gsap.to(line, {attr:{'stroke-dashoffset':0}, duration:1.5, ease:'power2.out'});
+
+  filtered.forEach((t,i) => {
+    const dot = svg.appendChild(svgEl('circle', {cx:x(i), cy:y(t.debit), r:'3', fill:'#f87171', style:'cursor:pointer'}));
+    dot.addEventListener('mouseenter', e => {
+      gsap.to(dot, {attr:{r:6}, duration:0.1});
+      showTooltip(e, `<div class="tooltip-title">${t.date}</div>
+        <div class="tooltip-row"><span class="tooltip-key">Late Fee</span><span class="tooltip-val debit-val">SAR ${fmt(t.debit)}</span></div>`);
+    });
+    dot.addEventListener('mousemove', posTooltip);
+    dot.addEventListener('mouseleave', () => { gsap.to(dot, {attr:{r:3}, duration:0.1}); hideTooltip(); });
+  });
+
+  [0,.5,1].forEach(t => {
+    const yv = H - pad.b - t*(H-pad.t-pad.b);
+    svg.appendChild(svgEl('text', {x:pad.l-4, y:yv+3, class:'axis-label', 'text-anchor':'end', 'font-size':'8'})).textContent = fmtK(t*maxV);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DONUT CHART
+// ═══════════════════════════════════════════════════════════════
+function drawDonut() {
+  const svg = document.getElementById('donutChart');
+  const legend = document.getElementById('donutLegend');
+  svg.innerHTML = ''; legend.innerHTML = '';
+
+  const types = [
+    {key:'Contributions', color:'#60a5fa'},
+    {key:'Late Payment Fees', color:'#f87171'},
+    {key:'Violations', color:'#fca5a5'},
+    {key:'Backdated Joining', color:'#c9a84c'},
+    {key:'Period Change', color:'#2dd4bf'},
+    {key:'Receipts', color:'#4ade80'},
+    {key:'Penalty Waiver', color:'#a78bfa'},
+    {key:'GOSI Initiative to Waive Late Fees and Violations', color:'#818cf8'},
+  ];
+
+  const filtered = getFilteredTxns();
+  const totals = types.map(tp => ({...tp, val: filtered.filter(t=>t.transaction===tp.key).reduce((s,t)=>s+t.debit+t.credit,0)})).filter(d=>d.val>0);
+  const total = totals.reduce((s,d)=>s+d.val,0) || 1;
+
+  const cx=90, cy=90, R=72, r=50;
+  let angle = -Math.PI/2;
+
+  totals.forEach((d,i) => {
+    const slice = (d.val/total)*Math.PI*2;
+    const x1=cx+R*Math.cos(angle), y1=cy+R*Math.sin(angle);
+    const x2=cx+R*Math.cos(angle+slice), y2=cy+R*Math.sin(angle+slice);
+    const xi1=cx+r*Math.cos(angle), yi1=cy+r*Math.sin(angle);
+    const xi2=cx+r*Math.cos(angle+slice), yi2=cy+r*Math.sin(angle+slice);
+    const large = slice>Math.PI?1:0;
+    const path = svg.appendChild(svgEl('path', {
+      d:`M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${r} ${r} 0 ${large} 0 ${xi1} ${yi1} Z`,
+      fill:d.color, 'fill-opacity':'.85', style:'cursor:pointer; transition:transform 0.2s',
+      'transform-origin':`${cx} ${cy}`
+    }));
+    const midA = angle + slice/2;
+    path.addEventListener('mouseenter', e => {
+      gsap.to(path, {scale:1.05, duration:0.15, transformOrigin:`${cx}px ${cy}px`});
+      showTooltip(e, `<div class="tooltip-title">${d.key}</div>
+        <div class="tooltip-row"><span class="tooltip-key">Total</span><span class="tooltip-val">SAR ${fmt(d.val)}</span></div>
+        <div class="tooltip-row"><span class="tooltip-key">Share</span><span class="tooltip-val">${(d.val/total*100).toFixed(1)}%</span></div>`);
+    });
+    path.addEventListener('mousemove', posTooltip);
+    path.addEventListener('mouseleave', () => { gsap.to(path, {scale:1, duration:0.15, transformOrigin:`${cx}px ${cy}px`}); hideTooltip(); });
+    angle += slice;
+
+    // Legend
+    const li = legend.appendChild(document.createElement('div'));
+    li.className = 'legend-item';
+    li.innerHTML = `<div class="legend-dot" style="background:${d.color}"></div>
+      <div class="legend-label">${d.key.length>18?d.key.slice(0,18)+'…':d.key}</div>
+      <div class="legend-val">${(d.val/total*100).toFixed(1)}%</div>`;
+  });
+
+  // Center text
+  const ct = svg.appendChild(svgEl('text', {x:cx, y:cy-6, class:'donut-center axis-label', 'font-size':'9', fill:'var(--text3)'}));
+  ct.textContent = 'TOTAL';
+  const cv = svg.appendChild(svgEl('text', {x:cx, y:cy+10, class:'donut-center', 'font-size':'13', fill:'var(--gold)', 'font-weight':'700', 'font-family':'Syne,sans-serif'}));
+  cv.textContent = fmtK(total);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TABLE
+// ═══════════════════════════════════════════════════════════════
+function renderTable() {
+  const body = document.getElementById('txnTableBody');
+  const info = document.getElementById('entriesInfo');
+  let data = getFilteredTxns();
+
+  // Sort
+  data.sort((a,b) => {
+    let av = a[state.sortCol], bv = b[state.sortCol];
+    if(typeof av === 'string') return state.sortDir * av.localeCompare(bv);
+    return state.sortDir * (av - bv);
+  });
+
+  info.textContent = `Showing ${Math.min(state.perPage, data.length)} of ${data.length} entries`;
+
+  const start = (state.page-1)*state.perPage;
+  const page = data.slice(start, start+state.perPage);
+
+  body.innerHTML = '';
+  page.forEach((t,i) => {
+    const tr = body.appendChild(document.createElement('tr'));
+    const cls = txnClass(t.transaction);
+    const shortTxn = t.transaction.length > 22 ? t.transaction.slice(0,22)+'…' : t.transaction;
+    tr.innerHTML = `
+      <td class="highlight">${t.date}</td>
+      <td><span style="background:${yearColors[t.year]}22;color:${yearColors[t.year]};padding:2px 8px;border-radius:20px;font-size:10px">${t.year}</span></td>
+      <td><span class="txn-badge ${cls}" title="${t.transaction}">${shortTxn}</span></td>
+      <td class="${t.debit?'debit-val':''}">${t.debit ? 'SAR '+fmt(t.debit) : '—'}</td>
+      <td class="${t.credit?'credit-val':''}">${t.credit ? 'SAR '+fmt(t.credit) : '—'}</td>
+      <td class="balance-up">${fmt(t.balance)}</td>`;
+    gsap.from(tr, {opacity:0, x:-12, duration:0.3, delay:i*0.025, ease:'power2.out'});
+  });
+
+  renderPagination(data.length);
+}
+
+function renderPagination(total) {
+  const pg = document.getElementById('pagination');
+  const pages = Math.ceil(total/state.perPage);
+  pg.innerHTML = '';
+  if(pages <= 1) return;
+
+  const prev = pg.appendChild(document.createElement('button'));
+  prev.className = 'pg-btn'; prev.textContent = '←';
+  prev.disabled = state.page <= 1;
+  prev.onclick = () => { state.page--; renderTable(); };
+
+  const range = [];
+  for(let i=1;i<=pages;i++) {
+    if(i===1||i===pages||Math.abs(i-state.page)<=1) range.push(i);
+    else if(range[range.length-1]!=='…') range.push('…');
+  }
+  range.forEach(p => {
+    const btn = pg.appendChild(document.createElement('button'));
+    btn.className = 'pg-btn' + (p===state.page?' active':'');
+    btn.textContent = p;
+    if(p==='…') { btn.disabled=true; return; }
+    btn.onclick = () => { state.page=p; renderTable(); };
+  });
+
+  const next = pg.appendChild(document.createElement('button'));
+  next.className = 'pg-btn'; next.textContent = '→';
+  next.disabled = state.page >= pages;
+  next.onclick = () => { state.page++; renderTable(); };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KPI COUNTERS
+// ═══════════════════════════════════════════════════════════════
+function animateKPIs() {
+  const totalContrib = txns.filter(t=>t.transaction==='Contributions').reduce((s,t)=>s+t.debit,0);
+  const totalLate = txns.filter(t=>t.transaction==='Late Payment Fees').reduce((s,t)=>s+t.debit,0);
+  const totalReceipts = txns.filter(t=>t.transaction==='Receipts').reduce((s,t)=>s+t.credit,0);
+  const balance = monthly[monthly.length-1].closing;
+
+  const counters = [
+    {el:'kpi1', target:balance, prefix:'SAR '},
+    {el:'kpi2', target:totalContrib, prefix:'SAR '},
+    {el:'kpi3', target:totalLate, prefix:'SAR '},
+    {el:'kpi4', target:totalReceipts, prefix:'SAR '},
+  ];
+
+  counters.forEach(({el, target, prefix}) => {
+    const elem = document.getElementById(el);
+    gsap.to({val:0}, {
+      val:target, duration:1.8, ease:'power2.out',
+      onUpdate: function() {
+        elem.textContent = prefix + (this.targets()[0].val/1000).toFixed(1) + 'K';
+      },
+      onComplete: function() {
+        elem.textContent = prefix + (target/1000).toFixed(1) + 'K';
+      }
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REDRAW ALL
+// ═══════════════════════════════════════════════════════════════
+function redrawAll() {
+  drawLineChart();
+  drawBarChart();
+  drawDonut();
+  drawYearChart();
+  drawLateChart();
+  renderTable();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FILTER EVENTS
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('yearFilters').addEventListener('click', e => {
+  if(!e.target.matches('.fb')) return;
+  document.querySelectorAll('#yearFilters .fb').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  state.yearFilter = e.target.dataset.year;
+  state.page = 1;
+  redrawAll();
+});
+
+document.getElementById('typeFilters').addEventListener('click', e => {
+  if(!e.target.matches('.fb')) return;
+  document.querySelectorAll('#typeFilters .fb').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  state.typeFilter = e.target.dataset.type;
+  state.page = 1;
+  redrawAll();
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  state.search = e.target.value;
+  state.page = 1;
+  renderTable();
+  drawDonut();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  state.yearFilter='all'; state.typeFilter='all'; state.search=''; state.page=1;
+  document.querySelectorAll('#yearFilters .fb').forEach(b=>b.classList.remove('active'));
+  document.querySelector('#yearFilters .fb[data-year="all"]').classList.add('active');
+  document.querySelectorAll('#typeFilters .fb').forEach(b=>b.classList.remove('active'));
+  document.querySelector('#typeFilters .fb[data-type="all"]').classList.add('active');
+  document.getElementById('searchInput').value='';
+  gsap.from('#resetBtn', {rotate:360, duration:0.5, ease:'power2.out'});
+  redrawAll();
+});
+
+// Line chart mode tabs
+document.querySelectorAll('.ct').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.ct').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.lineMode = btn.dataset.mode;
+    drawLineChart();
+  });
+});
+
+// Table sort
+document.querySelectorAll('thead th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if(state.sortCol===col) state.sortDir *= -1;
+    else { state.sortCol=col; state.sortDir=1; }
+    document.querySelectorAll('thead th').forEach(t=>t.classList.remove('sorted'));
+    th.classList.add('sorted');
+    th.querySelector('.sort-icon').textContent = state.sortDir===1?'↓':'↑';
+    state.page=1;
+    renderTable();
+  });
+});
+
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.sortCol = btn.dataset.sort;
+    state.sortDir = 1; state.page=1;
+    renderTable();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// RESIZE
+// ═══════════════════════════════════════════════════════════════
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(redrawAll, 200);
+});
+
+// ═══════════════════════════════════════════════════════════════
+// GSAP ENTRANCE ANIMATIONS
+// ═══════════════════════════════════════════════════════════════
+function initAnimations() {
+  const tl = gsap.timeline();
+
+  tl.to('.hero-eyebrow', {opacity:1, y:0, duration:0.6, ease:'power2.out'})
+    .to('.hero-title', {opacity:1, y:0, duration:0.7, ease:'power2.out'}, '-=0.3')
+    .to('.hero-sub', {opacity:1, y:0, duration:0.6, ease:'power2.out'}, '-=0.4')
+    .to('.kpi-card', {opacity:1, y:0, duration:0.5, stagger:0.1, ease:'power2.out'}, '-=0.2')
+    .to('#filtersBar', {opacity:1, duration:0.5, ease:'power2.out'}, '-=0.1')
+    .to('#lineCard, #donutCard, #barCard, #yearCard, #lateCard, #tableCard', {opacity:1, y:0, duration:0.6, stagger:0.08, ease:'power2.out'}, '-=0.1');
+
+  animateKPIs();
+  setTimeout(redrawAll, 400);
+
+  // Subtle floating animation on KPI cards
+  gsap.to('.kpi-card', {
+    y: '+=4', duration:3, ease:'sine.inOut',
+    stagger:{each:0.4, repeat:-1, yoyo:true}
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOADING SEQUENCE
+// ═══════════════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  const bar = document.getElementById('loadBar');
+  gsap.to(bar, {width:'100%', duration:1.2, ease:'power2.inOut', onComplete: () => {
+    gsap.to('#loading', {opacity:0, duration:0.5, onComplete: () => {
+      document.getElementById('loading').remove();
+      initAnimations();
+    }});
+  }});
+});
+</script>
+</body>
+</html>
